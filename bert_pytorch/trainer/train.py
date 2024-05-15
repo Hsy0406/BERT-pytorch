@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+#from torch.optim import SparseAdam
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
@@ -56,6 +57,7 @@ class newBERTTrainer:
 
         # Setting the Adam optimizer with hyper-param
         self.optim = Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+        #self.optim = SparseAdam(self.model.parameters(), lr=lr, betas=betas)
         self.optim_schedule = ScheduledOptim(self.optim, self.bert.hidden, n_warmup_steps=warmup_steps)
 
         # Using Negative Log Likelihood Loss function for predicting the masked_token
@@ -105,6 +107,9 @@ class newBERTTrainer:
                 self.optim_schedule.zero_grad()
                 loss.backward()
                 self.optim_schedule.step_and_update_lr()
+            else:
+                if i>=1000:
+                    break
 
             # next sentence prediction accuracy
             avg_loss += loss.item()

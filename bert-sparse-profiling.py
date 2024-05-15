@@ -124,9 +124,9 @@ print("Creating BERT Trainer")
 bert = BERT(seq_len, hidden=hidden, n_layers=layers, attn_heads=attn_heads)
 trainer = newBERTTrainer(bert, seq_len, train_dataloader=train_loader, test_dataloader=val_loader, lr=learning_rate, with_cuda=False)
 
-#for epoch in range(epochs):
-#    trainer.train(epoch)
-#    trainer.save(epoch, output_path)
+for epoch in range(epochs):
+    trainer.train(epoch)
+    trainer.save(epoch, output_path)
 
 if val_loader is not None:
     trainer.test(epoch)

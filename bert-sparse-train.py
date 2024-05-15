@@ -8,29 +8,17 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from bert_pytorch.model import BERT
 from bert_pytorch.trainer import newBERTTrainer
-import matplotlib.pyplot as plt
 
-def plot_bar_chart(data, name):
-    # 创建 x 轴坐标
-    plt.clf()
-    x = range(len(data))
-    plt.bar(x, data)
-    plt.xlabel('X Label')
-    plt.ylabel('Y Label')
-    #plt.title('Bar Chart')
-    plt.savefig('./output/'+name+'.png')
-    # 显示图表
-    plt.show()
 # 加载数据
-data = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/mini_train.csv')
+data = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/train.csv')
 question1 = data['question1'].values
 question2 = data['question2'].values
 labels = data['is_duplicate'].values
 
-test_data = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/mini_test.csv')
+test_data = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/test.csv')
 test_question1 = test_data['question1'].values
 test_question2 = test_data['question2'].values
-sample_submission = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/mini_sample_submission.csv')
+sample_submission = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/sample_submission.csv')
 test_labels = sample_submission['is_duplicate'].values
  
 # 初始化BertTokenizer和BertForSequenceClassification模型
@@ -65,26 +53,9 @@ for i in range(len(test_question2)):
         test_question2[i] = str(test_question2[i])
 # 将文本转换为BERT输入格式
 train_encodings = tokenizer(train_q1.tolist(), train_q2.tolist(), truncation=True, padding=True, max_length=seq_len)
-#print(list(train_encodings.keys()))
+print(list(train_encodings.keys()))
 val_encodings = tokenizer(val_q1.tolist(), val_q2.tolist(), truncation=True, padding=True, max_length=seq_len)
 test_encodings = tokenizer(test_question1.tolist(), test_question2.tolist(), truncation=True, padding=True, max_length=seq_len)
-
-# profile the input sparsity of bert on QQP
-q1_actual_length = []
-q2_actual_length = []
-question1_list = test_question1.tolist()
-question2_list = test_question2.tolist()
-print(len(question1_list))
-for i in range(len(question1_list)):
-    q1_actual_length.append(len(question1_list[i]))
-    q2_actual_length.append(len(question2_list[i]))
-    if i < 20:
-        print(len(question1_list[i]), len(question2_list[i]))
-    if i == 500:
-        break
-
-plot_bar_chart(q1_actual_length, "q1_actual_length")
-plot_bar_chart(q2_actual_length, "q2_actual_length")
 
 # 创建PyTorch的TensorDataset
 train_dataset = TensorDataset(
@@ -110,10 +81,11 @@ test_dataset = TensorDataset(
 batch_size = 16
 epochs = 5
 learning_rate = 2e-5
-output_path = "./bert_trained.model"
+output_path = "./output/SparseBert.model"
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 print("hsy: ", len(train_loader))
 #trainer = BERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,
@@ -122,11 +94,11 @@ print("hsy: ", len(train_loader))
 
 print("Creating BERT Trainer")
 bert = BERT(seq_len, hidden=hidden, n_layers=layers, attn_heads=attn_heads)
-trainer = newBERTTrainer(bert, seq_len, train_dataloader=train_loader, test_dataloader=val_loader, lr=learning_rate, with_cuda=False)
+trainer = newBERTTrainer(bert, seq_len, train_dataloader=train_loader, test_dataloader=test_loader, lr=learning_rate)
 
-#for epoch in range(epochs):
-#    trainer.train(epoch)
-#    trainer.save(epoch, output_path)
+for epoch in range(epochs):
+    trainer.train(epoch)
+    trainer.save(epoch, output_path)
 
-if val_loader is not None:
+if test_loader is not None:
     trainer.test(epoch)
