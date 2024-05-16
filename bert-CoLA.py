@@ -10,66 +10,60 @@ from bert_pytorch.model import BERT
 from bert_pytorch.trainer import newBERTTrainer
 from transformers import glue_convert_examples_to_features, GlueDataset
 from transformers import GlueDataTrainingArguments
+from torch.utils.data import Dataset
 
-#processor = CoLAProcessor()
-#train_examples = processor.get_train_examples('/data/huangsy/dataset/CoLA/train.tsv')
-#dev_examples = processor.get_dev_examples('/data/huangsy/dataset/CoLA/dev.tsv')
-#test_examples = processor.get_dev_examples('/data/huangsy/dataset/CoLA/test.tsv')
+class CustomDataset(Dataset):
+    def __init__(self, features):
+        self.features = features
 
-# 加载CoLA数据集
-task_name = 'cola'  # 设置为你想要的任务名称
-data_dir = '/data/huangsy/dataset/CoLA'  # 设置为你想要的任务名称
-args = GlueDataTrainingArguments(task_name=task_name, data_dir=data_dir)
-tokenizer = BertTokenizer.from_pretrained('tokenizer.json', do_lower_case=True)
-train_dataset = GlueDataset(args=args, tokenizer=tokenizer)
-dev_dataset = GlueDataset(args=args, tokenizer=tokenizer, mode='dev')
+    def __len__(self):
+        return len(self.features)
+
+    def __getitem__(self, idx):
+        feature = self.features[idx]
+
+        # 将 InputFeatures 转换为张量类型
+        input_ids = torch.tensor(feature.input_ids)
+        attention_mask = torch.tensor(feature.attention_mask)
+        labels = torch.tensor(feature.label)
+
+        sample = {
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            'labels': labels
+        }
+        return sample
 
 
-train_features = glue_convert_examples_to_features(train_examples, tokenizer)
-dev_features = glue_convert_examples_to_features(dev_examples, tokenizer)
-
-train_dataset = GlueDataset(train_features)
-dev_dataset = GlueDataset(dev_features)
-
-# 创建DataLoader
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-dev_dataloader = DataLoader(dev_dataset, batch_size=batch_size)
-
-# 加载数据
-data = pd.read_csv('/data/huangsy/dataset/CoLA/train.tsv')
-question1 = data['question1'].values
-question2 = data['question2'].values
-labels = data['is_duplicate'].values
-
-test_data = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/test.csv')
-test_question1 = test_data['question1'].values
-test_question2 = test_data['question2'].values
-sample_submission = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/sample_submission.csv')
-test_labels = sample_submission['is_duplicate'].values
- 
-# 定义超参数
-batch_size = 16
-epochs = 5
-learning_rate = 2e-5
-output_path = "./output/Bert-CoLA.model"
-
-# 初始化BertTokenizer和BertForSequenceClassification模型
-tokenizer = BertTokenizer.from_pretrained('tokenizer.json', do_lower_case=True)
-# model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2)
 seq_len = 384
 hidden = 768
 layers = 12
 attn_heads = 12
-#model = BERT(seq_len, hidden=hidden, n_layers=layers, attn_heads=attn_heads)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+batch_size = 16
+epochs = 5
+learning_rate = 2e-5
+output_path = "./output/Bert-cola.model"
+
+task_name = 'cola'
+data_dir = '/home/hsy/dataset/CoLA'
+args = GlueDataTrainingArguments(task_name=task_name, data_dir=data_dir)
+
+tokenizer = BertTokenizer.from_pretrained('tokenizer.json', do_lower_case=True)
+train_dataset = GlueDataset(args=args, tokenizer=tokenizer)
+dev_dataset = GlueDataset(args=args, tokenizer=tokenizer, mode='dev')
+test_dataset = GlueDataset(args=args, tokenizer=tokenizer, mode='test')
+
+
+train_features = CustomDataset(train_dataset)
+dev_features = CustomDataset(dev_dataset)
+test_features = CustomDataset(test_dataset)
+
+train_loader = DataLoader(train_features, batch_size=batch_size, shuffle=True)
+dev_loader = DataLoader(dev_features, batch_size=batch_size, shuffle=False)
+test_loader = DataLoader(test_features, batch_size=batch_size, shuffle=False)
 
 print("hsy: ", len(train_loader))
-#trainer = BERTTrainer(bert, len(vocab), train_dataloader=train_data_loader, test_dataloader=test_data_loader,
-#       lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), weight_decay=args.adam_weight_decay,
-#       with_cuda=args.with_cuda, cuda_devices=args.cuda_devices, log_freq=args.log_freq)
 
 print("Creating BERT Trainer")
 is_train = True

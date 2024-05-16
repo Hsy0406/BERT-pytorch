@@ -94,22 +94,30 @@ class newBERTTrainer:
         for data in data_loader:
             # 0. batch_data will be sent into the device(GPU or cpu)
             #data = {key: value.to(self.device) for key, value in data.items()}
-            input_ids = data[0].to(self.device)
-            attention_mask = data[1].to(self.device)
-            token_type_ids = data[2].to(self.device)
-            labels = data[3].to(self.device)
+            dataset = 'cola'
+            if dataset == 'qqp': 
+                input_ids = data[0].to(self.device)
+                attention_mask = data[1].to(self.device)
+                token_type_ids = data[2].to(self.device)
+                labels = data[3].to(self.device)
 
-            output, _  = self.model.forward(input_ids, token_type_ids)
-            
-            loss = self.criterion(output, labels)
+                output, _  = self.model.forward(input_ids, token_type_ids)
+                loss = self.criterion(output, labels)
+            else:
+                input_ids = data['input_ids'].to(self.device)
+                attention_mask = data['attention_mask'].to(self.device)
+                token_type_ids = torch.zeros_like(input_ids)
+                labels = data['labels'].to(self.device)
+                output, _  = self.model.forward(input_ids, token_type_ids)
+                loss = self.criterion(output, labels)
 
             if train:
                 self.optim_schedule.zero_grad()
                 loss.backward()
                 self.optim_schedule.step_and_update_lr()
-            else:
-                if i>=1000:
-                    break
+            #else:
+            #    if i>=1000:
+            #        break
 
             # next sentence prediction accuracy
             avg_loss += loss.item()

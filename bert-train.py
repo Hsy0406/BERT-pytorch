@@ -10,16 +10,16 @@ from bert_pytorch.model import BERT
 from bert_pytorch.trainer import newBERTTrainer
 
 # 加载数据
-torch.cuda.set_device(1)
-data = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/mini_train.csv')
+#torch.cuda.set_device(1)
+data = pd.read_csv('/home/hsy/dataset/quora-question-pairs/mini_train.csv')
 question1 = data['question1'].values
 question2 = data['question2'].values
 labels = data['is_duplicate'].values
 
-test_data = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/mini_test.csv')
+test_data = pd.read_csv('/home/hsy/dataset/quora-question-pairs/test.csv')
 test_question1 = test_data['question1'].values
 test_question2 = test_data['question2'].values
-sample_submission = pd.read_csv('/data/huangsy/dataset/quora-question-pairs/mini_sample_submission.csv')
+sample_submission = pd.read_csv('/home/hsy/dataset/quora-question-pairs/sample_submission.csv')
 test_labels = sample_submission['is_duplicate'].values
  
 # 初始化BertTokenizer和BertForSequenceClassification模型
@@ -109,9 +109,5 @@ else:
     bert = torch.load(output_path)
     trainer = newBERTTrainer(bert, seq_len, train_dataloader=train_loader, test_dataloader=test_loader, lr=learning_rate)
     
-    for epoch in range(epochs):
-        trainer.train(epoch)
-        trainer.save(epoch, output_path)
-    
     if test_loader is not None:
-        trainer.test(epoch)
+        trainer.test(1)
